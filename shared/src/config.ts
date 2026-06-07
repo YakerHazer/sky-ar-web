@@ -114,6 +114,12 @@ export interface TrackerConfig {
     auto: boolean;
     /** Estimated pointing sigma used for the zoom-out floor, deg. */
     sigmaDeg: number;
+    /**
+     * Pointing sigma to use while vision is actively locked, deg — the
+     * detector's residual, far tighter than the open-loop estimate. This is
+     * what lets the camera zoom past ~5× to the framing target once locked.
+     */
+    lockedSigmaDeg: number;
     /** Fraction of frame height the plane should fill. */
     fillFrac: number;
     /** HFOV used when auto is off, deg. */
@@ -128,6 +134,14 @@ export interface TrackerConfig {
     applyCorrection: boolean;
     /** Stay at full wide while searching (Phase B bring-up). */
     lockWide: boolean;
+    /**
+     * Once zoomed in and vision-locked on the plane, fire a one-push
+     * autofocus ON THE PLANE (re-triggered on each zoom step). The lens is
+     * not parfocal, so the fixed infinity far-stop goes soft at high zoom —
+     * focusing on the actual subject keeps it sharp. false = hold the
+     * infinity far-stop (sharp at low zoom, may soften at high zoom).
+     */
+    autofocusOnZoom: boolean;
     /** Detector cadence, ms. */
     intervalMs: number;
     /**
@@ -393,6 +407,7 @@ export const DEFAULT_CONFIG: Config = {
     zoom: {
       auto: true,
       sigmaDeg: 0.6,
+      lockedSigmaDeg: 0.35,
       fillFrac: 0.28,
       manualHfovDeg: 20,
       // Datasheet endpoints; refined empirically at M4.
@@ -405,6 +420,7 @@ export const DEFAULT_CONFIG: Config = {
       enabled: true,
       applyCorrection: false,
       lockWide: true,
+      autofocusOnZoom: true,
       intervalMs: 250,
       encodeLagMs: 350,
       correctionSlewDps: 1.2,

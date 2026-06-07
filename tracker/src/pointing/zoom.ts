@@ -30,6 +30,13 @@ export function chooseZoom(
   angularRateDps = 0,
   /** Measured camera lag (reported pose vs commanded), deg. */
   lagDeg = 0,
+  /**
+   * When vision is actively centering the plane, the pointing uncertainty is
+   * the vision residual (~tenths of a degree), NOT the open-loop lag/rate
+   * estimate — so collapse sigma to this. Without it the pointing floor
+   * `2·(2σ+θ/2)` pins the zoom at ~5× even with a rock-solid lock.
+   */
+  lockedSigmaDeg?: number,
 ): ZoomChoice {
   const span = wingspanM(ac.typeCode, ac.category);
   const theta = angularSizeDeg(span, azEl.slantM);
@@ -46,12 +53,15 @@ export function chooseZoom(
   // Pointing sigma grows with the target's angular rate (timing skew turns
   // into angle), with how far the camera is currently trailing its command
   // (it widens while straining, tightens when locked), and near the zenith
-  // (pan-rate singularity).
+  // (pan-rate singularity). A live vision lock overrides all of that — the
+  // detector is closing the loop, so trust the tight residual.
   const zenithFactor = 1 + Math.max(0, (azEl.elDeg - 78) / 4);
   const sigma =
-    cfg.zoom.sigmaDeg * zenithFactor +
-    angularRateDps * TIMING_SIGMA_SEC +
-    lagDeg;
+    lockedSigmaDeg != null
+      ? lockedSigmaDeg * zenithFactor
+      : cfg.zoom.sigmaDeg * zenithFactor +
+        angularRateDps * TIMING_SIGMA_SEC +
+        lagDeg;
 
   let hfov = requiredHfovDeg(theta, sigma, cfg.zoom.fillFrac);
   const wide = Math.max(...lut.map((p) => p.hfovDeg));

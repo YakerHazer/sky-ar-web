@@ -401,13 +401,15 @@ export class ViscaCamera implements CameraDriver {
     this.sendCommand([0x81, 0x01, 0x04, 0x47, ...nibbles(z, 4), 0xff]);
   }
 
-  /** Focus state: null = unknown (assert on first call). */
-  private focusInfinity: boolean | null = null;
+  /** Focus state: null = unknown (assert on first call). "onepush" means a
+   *  one-push AF sweep is the active mode (distinct from steady infinity). */
+  private focusMode: "infinity" | "auto" | "onepush" | null = null;
   private focusFarTimer: ReturnType<typeof setTimeout> | null = null;
 
   setFocusInfinity(on: boolean): void {
-    if (this.focusInfinity === on) return;
-    this.focusInfinity = on;
+    const want = on ? "infinity" : "auto";
+    if (this.focusMode === want) return;
+    this.focusMode = want;
     if (this.focusFarTimer) clearTimeout(this.focusFarTimer);
     if (on) {
       // Manual focus mode, then drive FAR to the stop (the far stop IS
@@ -422,6 +424,19 @@ export class ViscaCamera implements CameraDriver {
       this.sendCommand([0x81, 0x01, 0x04, 0x08, 0x00, 0xff]); // focus stop
       this.sendCommand([0x81, 0x01, 0x04, 0x38, 0x02, 0xff]); // auto focus
     }
+  }
+
+  onePushAutofocus(): void {
+    // Always re-armable: the caller debounces (one sweep per zoom change).
+    if (this.focusFarTimer) {
+      clearTimeout(this.focusFarTimer);
+      this.focusFarTimer = null;
+    }
+    this.focusMode = "onepush";
+    // Switch to AF mode, fire One Push Trigger; the camera does a single
+    // sweep on the framed subject (the plane) and holds.
+    this.sendCommand([0x81, 0x01, 0x04, 0x38, 0x02, 0xff]); // auto focus mode
+    this.sendCommand([0x81, 0x01, 0x04, 0x18, 0x01, 0xff]); // one-push trigger
   }
 
   jog(pan: number, tilt: number, zoom: number): void {

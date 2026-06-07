@@ -90,6 +90,10 @@ export class SimCamera implements CameraDriver {
     // No optics to defocus in the simulator.
   }
 
+  onePushAutofocus(): void {
+    // No optics to focus in the simulator.
+  }
+
   stopMotion(): void {
     this.commands++;
     this.goal = null;

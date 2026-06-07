@@ -39,6 +39,14 @@ export interface CameraDriver {
    */
   setFocusInfinity(on: boolean): void;
 
+  /**
+   * Trigger a single autofocus sweep on the current subject, then hold
+   * (one-push AF). Used once the plane is zoomed in and vision-centered: the
+   * lens isn't parfocal, so the infinity far-stop goes soft at high zoom —
+   * focusing on the actual plane is the only reliable way to stay sharp.
+   */
+  onePushAutofocus(): void;
+
   /** Stop all motion. */
   stopMotion(): void;
 

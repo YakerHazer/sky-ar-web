@@ -106,6 +106,9 @@ export class ControlLoop {
   /** Zoom ladder rung (0 = full wide); climbs as vision lock sustains. */
   private ladderIdx = 0;
   private lastLadderAt = 0;
+  /** Focus-on-plane state: zoom units at the last one-push AF, and when. */
+  private lastFocusZoom = 0;
+  private lastFocusAt = 0;
   /**
    * Recent aim/prediction history so vision can reference the pose AT FRAME
    * TIME — frames lag ~0.7 s, and measuring a blob in an old frame against
@@ -296,6 +299,8 @@ export class ControlLoop {
     this.visionGoodSince = 0;
     this.ladderIdx = 0;
     this.lastLadderAt = 0;
+    this.lastFocusZoom = 0;
+    this.lastFocusAt = 0;
     this.panRateI = 0;
     this.tiltRateI = 0;
     this.lastPanRateCmd = 0;
@@ -415,7 +420,17 @@ export class ControlLoop {
             poseEst.tiltDeg - pt.tiltDeg,
           )
         : 0;
-      const zoom = chooseZoom(targetAc, prediction.azEl, cfg, rateDps, lagDeg);
+      // Vision is closing the loop when it has held the plane centered for a
+      // while — then the pointing uncertainty is the tiny detector residual,
+      // which lets the zoom tighten past the open-loop ~5× floor.
+      const visionLocked =
+        cfg.vision.applyCorrection &&
+        this.visionGoodSince > 0 &&
+        now - this.visionGoodSince > 1500;
+      const zoom = chooseZoom(
+        targetAc, prediction.azEl, cfg, rateDps, lagDeg,
+        visionLocked ? cfg.zoom.lockedSigmaDeg : undefined,
+      );
       if (hold && zoom.hfovDeg < ZENITH_MIN_HFOV) {
         // Wide through the crossing so the fly-through stays framed.
         zoom.hfovDeg = ZENITH_MIN_HFOV;
@@ -432,10 +447,7 @@ export class ControlLoop {
         const RUNG = 0.62; // hfov ratio per rung
         const detFresh =
           this.lastDetection && now - this.lastDetection.t < 1200;
-        const locked =
-          cfg.vision.applyCorrection &&
-          this.visionGoodSince > 0 &&
-          now - this.visionGoodSince > 1500;
+        const locked = visionLocked;
         if (!detFresh && this.lastDetection == null) {
           this.ladderIdx = 0; // lost entirely -> reacquire wide
         } else if (locked && detFresh && now - this.lastLadderAt > 1500) {
@@ -467,11 +479,27 @@ export class ControlLoop {
       angular = zoom.angularSizeDeg;
       commandedPanTilt = pt;
 
-      // A long lens on open sky gives autofocus nothing to lock onto — it
-      // hunts and blurs the plane into nothing (and the detector loses it).
-      // Pin manual focus at the far stop once meaningfully zoomed; hand back
-      // to autofocus at wide, where hyperfocal depth covers everything.
-      d.setFocusInfinity(zoom.hfovDeg < 30);
+      // Focus strategy:
+      //  - Zoomed in AND vision-locked on the plane: one-push autofocus ON
+      //    THE PLANE, re-fired after each zoom step settles. The lens is not
+      //    parfocal, so the fixed infinity far-stop softens at high zoom;
+      //    focusing on the actual (now frame-filling, centered) subject is the
+      //    only reliable way to stay sharp toward 20×.
+      //  - Otherwise: infinity far-stop when meaningfully zoomed (a long lens
+      //    on open sky makes autofocus hunt), autofocus at wide (hyperfocal
+      //    depth covers everything and the plane is too small to lock).
+      const zoomedIn = zoom.hfovDeg < 25;
+      if (zoomedIn && visionLocked && cfg.vision.autofocusOnZoom) {
+        const zoomMoved = Math.abs(zoom.zoomUnits - this.lastFocusZoom) > 60;
+        if ((this.lastFocusZoom === 0 || zoomMoved) && now - this.lastFocusAt > 1500) {
+          d.onePushAutofocus();
+          this.lastFocusZoom = zoom.zoomUnits;
+          this.lastFocusAt = now;
+        }
+      } else {
+        d.setFocusInfinity(zoomedIn);
+        this.lastFocusZoom = 0; // re-arm one-push AF for the next lock
+      }
 
       const cmd: CameraPose = { ...pt, zoomUnits: zoom.zoomUnits };
       this.lastCommanded = cmd;
