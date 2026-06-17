@@ -11,6 +11,8 @@ export function App() {
   const { config, patch, reset, ref } = useConfig();
   const [started, setStarted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  /** True once a real GPS fix has been applied to the config center. */
+  const [gpsApplied, setGpsApplied] = useState(false);
 
   const camera = useCamera();
   const geo = useGeolocation();
@@ -25,30 +27,58 @@ export function App() {
   const orientation = useOrientation(getTrim);
   const getView = useCallback(() => orientation.viewRef.current, [orientation.viewRef]);
 
-  const { aircraft, status, tles } = useAircraft(getCenter, config.radiusMiles, config.pollMs);
+  const { aircraft, status, tles, refresh } = useAircraft(getCenter, config.radiusMiles, config.pollMs);
+
+  const applyGps = useCallback(
+    (lat: number, lon: number) => {
+      patch({
+        centerLat: lat,
+        centerLon: lon,
+        locationName: `Your location (${lat.toFixed(3)}, ${lon.toFixed(3)})`,
+      });
+      setGpsApplied(true);
+      // The poll effect re-arms when center-derived values change, but force a
+      // refresh so the new location's aircraft show immediately.
+      refresh();
+    },
+    [patch, refresh],
+  );
+
+  const relocate = useCallback(() => {
+    geo.request(applyGps);
+  }, [geo, applyGps]);
 
   const start = useCallback(async () => {
     // All three permissions require a user gesture on iOS — kick them off here.
-    geo.request((lat, lon) => patch({ centerLat: lat, centerLon: lon, locationName: "Your location" }));
+    geo.request(applyGps);
     void camera.request();
     void orientation.request();
     setStarted(true);
-  }, [geo, camera, orientation, patch]);
+  }, [geo, camera, orientation, applyGps]);
 
   const showStart = !started;
 
   const banner = useMemo(() => {
     if (!started) return null;
     if (camera.status === "denied")
-      return "Camera permission denied — reload and allow the camera to see the live sky.";
+      return { text: "Camera permission denied — reload and allow the camera to see the live sky." };
     if (camera.status === "unsupported")
-      return "This browser can't open the camera. Try Safari (iOS) or Chrome (Android).";
+      return { text: "This browser can't open the camera. Try Safari (iOS) or Chrome (Android)." };
     if (orientation.status === "denied")
-      return "Motion permission denied — the overlay won't track the camera. Reload to retry.";
+      return { text: "Motion permission denied — the overlay won't track the camera. Reload to retry." };
     if (orientation.status === "unsupported")
-      return "Device orientation isn't available here; the overlay is drawn but won't track panning.";
+      return { text: "Device orientation isn't available here; the overlay is drawn but won't track panning." };
+    // Location problems — all retryable by tapping the banner.
+    if (geo.status === "denied")
+      return { text: "📍 Location denied — showing the default (San Francisco). Tap to use your GPS.", action: relocate };
+    if (geo.status === "error")
+      return { text: "📍 Couldn't get your location — showing the default. Tap to retry.", action: relocate };
+    if (geo.status === "locating")
+      return { text: "📍 Getting your location…" };
+    if (!gpsApplied)
+      return { text: "📍 Using the default location (San Francisco). Tap to use your GPS.", action: relocate };
     return null;
-  }, [started, camera.status, orientation.status]);
+  }, [started, camera.status, orientation.status, geo.status, gpsApplied, relocate]);
 
   return (
     <div className="app">
@@ -66,14 +96,25 @@ export function App() {
           <div className="hud">
             <div className={`hud-dot ${status?.ok ? "ok" : "bad"}`} />
             <span>
-              {config.locationName} · {status?.count ?? 0} aircraft · {Math.round(orientation.view?.az ?? 0)}°
+              {config.locationName}{" "}
+              <span className={`hud-loc ${gpsApplied ? "on" : ""}`}>{gpsApplied ? "📍GPS" : "default"}</span>
+              {" · "}
+              {status?.count ?? 0} ac · {Math.round(orientation.view?.az ?? 0)}°
               {orientation.view ? ` / ${Math.round(orientation.view.alt)}°` : ""}
             </span>
           </div>
           <button className="fab" onClick={() => setShowSettings(true)} aria-label="Settings">
             ⚙
           </button>
-          {banner && <div className="banner">{banner}</div>}
+          {banner && (
+            <div
+              className={`banner ${banner.action ? "tap" : ""}`}
+              onClick={banner.action}
+              role={banner.action ? "button" : undefined}
+            >
+              {banner.text}
+            </div>
+          )}
         </>
       )}
 
@@ -88,7 +129,7 @@ export function App() {
             <ul className="gate-perms">
               <li>📷 Back camera</li>
               <li>🧭 Motion &amp; compass</li>
-              <li>📍 Your location</li>
+              <li>📍 Your location (sets the live center to where you stand)</li>
             </ul>
             <button className="gate-start" onClick={() => void start()}>
               Start AR

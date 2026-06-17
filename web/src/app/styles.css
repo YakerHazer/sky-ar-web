@@ -126,6 +126,28 @@ body {
   border: 1px solid rgba(255, 120, 100, 0.4);
 }
 
+.banner.tap {
+  cursor: pointer;
+  background: rgba(60, 50, 110, 0.78);
+  color: #e6e2ff;
+  border-color: rgba(130, 120, 220, 0.5);
+}
+
+.hud-loc {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #8a93ad;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.hud-loc.on {
+  color: #6ce0a8;
+  background: rgba(108, 224, 168, 0.12);
+}
+
 /* ---- start gate ---- */
 .gate {
   position: absolute;
