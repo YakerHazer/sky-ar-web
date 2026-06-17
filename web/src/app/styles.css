@@ -1,0 +1,343 @@
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background: #000;
+  color: #e8ecff;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ---- AR viewport ---- */
+.ar-viewport {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
+.ar-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Mirror OFF — this is a see-through window onto the real sky. */
+}
+
+.ar-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ---- HUD ---- */
+.hud {
+  position: absolute;
+  top: calc(var(--safe-top) + 8px);
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(10, 14, 26, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  color: #cdd4e6;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hud-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3a4256;
+}
+
+.hud-dot.ok {
+  background: #6ce0a8;
+  box-shadow: 0 0 8px #6ce0a8;
+}
+
+.hud-dot.bad {
+  background: #ff7a6b;
+}
+
+.fab {
+  position: absolute;
+  bottom: calc(var(--safe-bottom) + 18px);
+  right: 18px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 14, 26, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #e8ecff;
+  font-size: 22px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.banner {
+  position: absolute;
+  bottom: calc(var(--safe-bottom) + 80px);
+  left: 16px;
+  right: 80px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(120, 30, 30, 0.72);
+  color: #ffe9e6;
+  font-size: 13px;
+  line-height: 1.35;
+  border: 1px solid rgba(255, 120, 100, 0.4);
+}
+
+/* ---- start gate ---- */
+.gate {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(120% 80% at 50% 0%, #131a2e 0%, #05070d 60%, #000 100%);
+}
+
+.gate-card {
+  max-width: 360px;
+  text-align: center;
+}
+
+.gate-card h1 {
+  margin: 0 0 8px;
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, #9b7ecf, #78e0c4, #6eb2ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gate-card p {
+  margin: 0 0 18px;
+  color: #aeb6c6;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.gate-perms {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #cdd4e6;
+  font-size: 14px;
+}
+
+.gate-start {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(90deg, #6eb2ff, #9b7ecf);
+  color: #05070d;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+
+.gate-note {
+  margin: 14px 0 0 !important;
+  font-size: 12px !important;
+  color: #6b7280 !important;
+}
+
+/* ---- settings sheet ---- */
+.settings {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 7, 13, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+}
+
+.set-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 14px) 18px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0b1020;
+}
+
+.set-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.set-close {
+  background: none;
+  border: none;
+  color: #aeb6c6;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.set-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 18px calc(var(--safe-bottom) + 24px);
+  background: #070a13;
+}
+
+.set-section {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.set-section h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  min-height: 38px;
+}
+
+.set-label {
+  font-size: 14px;
+  color: #cdd4e6;
+  flex: 1;
+}
+
+.set-control {
+  flex: 0 1 55%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.set-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: #6eb2ff;
+}
+
+input[type="number"] {
+  width: 90px;
+  background: #121a2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #e8ecff;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+select {
+  background: #121a2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #e8ecff;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.toggle {
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: #2a3350;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex: 0 0 auto;
+}
+
+.toggle.on {
+  background: #6eb2ff;
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.toggle.on .toggle-knob {
+  transform: translateX(18px);
+}
+
+.set-reset {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 90, 71, 0.4);
+  background: transparent;
+  color: #ff9a8c;
+  font-size: 14px;
+  cursor: pointer;
+}

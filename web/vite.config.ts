@@ -3,8 +3,10 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 
 const SHARED = resolve(__dirname, "../shared/src");
-const SERVER = process.env.SERVER_URL ?? "http://localhost:3000";
-const TRACKER = process.env.TRACKER_URL ?? "http://localhost:3001";
+// In dev, proxy the API to `vercel dev` (or any local server) on :3000 so the
+// serverless functions are exercised. In production (Vercel) these routes are
+// served by the platform.
+const API_TARGET = process.env.API_TARGET ?? "http://localhost:3000";
 
 export default defineConfig({
   plugins: [react()],
@@ -12,29 +14,14 @@ export default defineConfig({
     alias: { "@shared": SHARED },
   },
   server: {
-    host: true, // expose dev server on LAN too
+    host: true,
     fs: { allow: [resolve(__dirname, ".."), SHARED] },
     proxy: {
-      // tracker first: more specific prefixes win over the bare /api below
-      "/api/tracker": { target: TRACKER, changeOrigin: true },
-      "/tracker-ws": { target: TRACKER, ws: true, changeOrigin: true },
-      "/video": { target: TRACKER, changeOrigin: true },
-      "/frame.jpg": { target: TRACKER, changeOrigin: true },
-      "/api": { target: SERVER, changeOrigin: true },
-      "/ws": { target: SERVER, ws: true, changeOrigin: true },
+      "/api": { target: API_TARGET, changeOrigin: true },
     },
   },
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        index: resolve(__dirname, "index.html"),
-        control: resolve(__dirname, "control.html"),
-        tracker: resolve(__dirname, "tracker.html"),
-        tv: resolve(__dirname, "tv.html"),
-        stream: resolve(__dirname, "stream.html"),
-      },
-    },
   },
 });
